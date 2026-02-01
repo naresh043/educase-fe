@@ -1,6 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { LoginFunction } from "../Services/Apis";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,21 +13,23 @@ export default function Login() {
   const validate = () => {
     const newErrors = {};
 
-    if (!email) {
-      newErrors.email = "Email is required";
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+    if (!email) newErrors.email = "Email is required";
+    else if (!/\S+@\S+\.\S+/.test(email))
       newErrors.email = "Invalid email address";
-    }
 
-    if (!password) {
-      newErrors.password = "Password is required";
-    } else if (password.length < 6) {
+    if (!password) newErrors.password = "Password is required";
+    else if (password.length < 6)
       newErrors.password = "Minimum 6 characters";
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const isFormValid =
+    email &&
+    password &&
+    /\S+@\S+\.\S+/.test(email) &&
+    password.length >= 6;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -39,64 +40,77 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await LoginFunction({ email, password });
-
-      if (res.status === 200) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        navigate("/profile");
-      }
-    } catch (error) {
-      setServerError(
-        error.response?.data?.message || "Invalid email or password",
+      const users = JSON.parse(localStorage.getItem("users")) || [];
+      const user = users.find(
+        (u) => u.email === email && u.password === password
       );
+
+      if (!user) {
+        setServerError("Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem("token", "dummy-token");
+      localStorage.setItem("user", JSON.stringify(user));
+      navigate("/profile");
+    } catch {
+      setServerError("Invalid email or password");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-md p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Signin to your <br /> PopX account
-          </h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Lorem ipsum dolor sit amet consectetur adipisicing elit.
-          </p>
-        </div>
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/profile");
+    }
+  }, [navigate]);
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700">
-              Email address <span className="text-red-500">*</span>
+  return (
+    <div className="min-h-screen flex justify-center ">
+      <div className="w-[360px] px-6 py-8 bg-gray-100">
+        <h2 className="text-xl font-semibold text-gray-900 leading-snug">
+          Signin to your <br /> PopX account
+        </h2>
+
+        <p className="text-sm text-gray-400 mt-3">
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit,
+        </p>
+
+        <form onSubmit={onSubmit} className="mt-6 space-y-6">
+          {/* Email */}
+          <div className="relative">
+            <label className="absolute -top-2 left-3 bg-gray-100 px-1 text-xs text-[#6C2EFF]">
+              Email Address
             </label>
             <input
               type="email"
+              placeholder="Enter email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-md border px-3 py-3 text-sm placeholder-gray-400 focus:outline-none ${
                 errors.email
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-purple-400"
+                  ? "border-red-400"
+                  : "border-gray-300 focus:border-[#6C2EFF]"
               }`}
             />
             <p className="text-xs text-red-500 mt-1">{errors.email || " "}</p>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-gray-700">
-              Password <span className="text-red-500">*</span>
+          {/* Password */}
+          <div className="relative">
+            <label className="absolute -top-2 left-3 bg-gray-100 px-1 text-xs text-[#6C2EFF]">
+              Password
             </label>
             <input
               type="password"
+              placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`mt-1 w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-md border px-3 py-3 text-sm placeholder-gray-400 focus:outline-none ${
                 errors.password
-                  ? "border-red-500 focus:ring-red-300"
-                  : "border-gray-300 focus:ring-purple-400"
+                  ? "border-red-400"
+                  : "border-gray-300 focus:border-[#6C2EFF]"
               }`}
             />
             <p className="text-xs text-red-500 mt-1">
@@ -104,15 +118,17 @@ export default function Login() {
             </p>
           </div>
 
-          {serverError && <p className="text-xs text-red-600">{serverError}</p>}
+          {serverError && (
+            <p className="text-xs text-red-600">{serverError}</p>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
-            className={`w-full rounded-lg py-3 text-white text-sm font-medium transition ${
-              loading
-                ? "bg-purple-400 cursor-not-allowed"
-                : "bg-purple-600 hover:bg-purple-700"
+            disabled={!isFormValid || loading}
+            className={`w-full py-3 rounded-md text-sm font-medium transition ${
+              isFormValid && !loading
+                ? "bg-[#6C2EFF] text-white"
+                : "bg-gray-300 text-white cursor-not-allowed"
             }`}
           >
             {loading ? "Logging..." : "Login"}

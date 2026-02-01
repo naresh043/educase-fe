@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Landing from './pages/Landing'
-import Signup from './pages/Signup'
+import Signup from './pages/SignUp'
 import Login from './pages/Login'
 import ProfileCard from './pages/ProfileCard'
 
